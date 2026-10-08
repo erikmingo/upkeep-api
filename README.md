@@ -7,6 +7,7 @@ make run                 # http://localhost:8099/health
 make test && make lint     # DB test runs only when TEST_DATABASE_URL is set (make db, then: psql $DATABASE_URL -c 'create database upkeep_test')
 make generate              # sqlc → internal/db (after editing internal/db/queries/*.sql or a migration)
 make migrate status        # also: make migrate up | down
+make seed                  # reset users to 20 fixed fake rows (truncates!)
 docker build -t upkeep-api . && docker run --rm -p 8080:8080 -e DATABASE_URL=... upkeep-api
 ```
 

@@ -1,4 +1,4 @@
-.PHONY: run test lint db generate migrate
+.PHONY: run test lint db generate migrate seed
 
 # pure-Go project; also sidesteps the broken Xcode clang on this Mac
 export CGO_ENABLED=0
@@ -27,3 +27,6 @@ migrate:
 
 up down status:
 	@:
+
+seed:
+	go run ./cmd/seed
