@@ -1,4 +1,7 @@
-.PHONY: run test lint db
+.PHONY: run test lint db generate migrate
+
+# pure-Go project; also sidesteps the broken Xcode clang on this Mac
+export CGO_ENABLED=0
 
 -include .env
 export
@@ -15,3 +18,12 @@ lint:
 
 db:
 	docker compose up -d --wait db
+
+generate:
+	go generate ./...
+
+migrate:
+	go run ./cmd/migrate $(filter-out $@,$(MAKECMDGOALS))
+
+up down status:
+	@:

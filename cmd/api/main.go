@@ -13,13 +13,26 @@ import (
 	"time"
 
 	"github.com/erikmingo/upkeep-api/internal/config"
+	"github.com/erikmingo/upkeep-api/internal/db"
 )
 
-func newMux() *http.ServeMux {
+type pinger interface {
+	Ping(context.Context) error
+}
+
+func newMux(p pinger) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+		defer cancel()
+		body := map[string]string{"status": "ok", "service": "upkeep-api", "db": "ok"}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "service": "upkeep-api"})
+		if err := p.Ping(ctx); err != nil {
+			log.Printf("health: db ping: %v", err)
+			body["status"], body["db"] = "degraded", "unreachable"
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		json.NewEncoder(w).Encode(body)
 	})
 	return mux
 }
@@ -29,7 +42,15 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: newMux()}
+	pool, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	if err := db.Migrate(ctx, pool); err != nil {
+		return err
+	}
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: newMux(pool)}
 
 	errc := make(chan error, 1)
 	go func() {
