@@ -14,3 +14,5 @@ docker build -t upkeep-api . && docker run --rm -p 8080:8080 -e DATABASE_URL=...
 From a phone on the same Wi-Fi: `http://$(ipconfig getifaddr en0):8099/health`.
 
 Migrations in `internal/db/migrations` (goose, embedded) run at API startup. Build with `CGO_ENABLED=0` (the Makefile sets it): the project is pure Go and this Mac's Xcode clang is broken.
+
+CI (`.github/workflows/ci.yml`) runs gofmt, vet and the full test suite against a Postgres service on every PR. Branch protection on `main` requiring the `test` check is a one-time click: Settings → Branches → Add rule → `main` → Require status checks → `test`.
