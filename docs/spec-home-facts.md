@@ -1,6 +1,6 @@
 # Spec: home facts drive upkeep
 
-Status: draft, 2026-10-09. Vocabulary: `domain-model.md`.
+Status: reviewed 2026-10-09. Vocabulary: `domain-model.md`.
 
 ## Problem
 
@@ -19,10 +19,10 @@ Only facts with a Task consequence. Keys are dotted paths; values are enums, int
 
 | Section | Keys | Unlocks |
 |---|---|---|
-| basics | `home.type` (house, condo, townhouse), `home.year_built`, `home.stories`, `home.zip` → `home.climate` (derived) | gates every section; freeze-season tasks |
+| basics | `home.type` (house, condo, townhouse), `home.year_built`, `home.stories`, `home.sqft`, `home.beds`, `home.baths` | type gates every section; year hints at old plumbing and wiring; sqft/beds/baths are profile facts with no task consequence in v1 |
 | hvac | `furnace.type` (gas, electric, heat_pump, boiler, none), `furnace.filter_size`, `ac.type` (central, window, mini_split, none), `humidifier.present` | filter 1–3 mo, furnace service yearly, AC coil clean, boiler bleed |
 | water | `water_heater.type` (tank, tankless, none), `water_heater.installed`, `softener.present`, `water.source` (city, well), `sewer.type` (sewer, septic), `sump_pump.present` | tank flush yearly, anode 3 yr, softener salt monthly, septic pump 3–5 yr, sump test spring, well test yearly |
-| exterior | `roof.material` (asphalt, metal, tile, flat), `roof.installed`, `gutters.present`, `gutters.guards`, `siding.type` (brick, wood, vinyl, stucco, fiber_cement), `deck.material` (wood, composite, none), `fence.material` | gutter clean spring + fall, roof inspection, deck seal 2 yr, repaint by siding |
+| exterior | `roof.material` (asphalt, metal, tile, flat), `roof.installed`, `gutters.present`, `gutters.guards`, `deck.material` (wood, composite, none) | gutter clean spring + fall, roof inspection, deck seal 2 yr |
 | outdoor | `lawn.present`, `sprinkler.present`, `trees.near_house`, `pool.type` (none, pool, hot_tub) | sprinkler blowout before freeze, tree trim, pool chemistry weekly in season |
 | safety | `detectors.smoke_count`, `detectors.co_count`, `extinguisher.present`, `dryer.vent_length` (short, long), `radon.last_test` | battery swap, extinguisher check, dryer vent clean yearly, radon retest 2 yr |
 | appliances | `fridge.water_filter`, `dishwasher.present`, `disposal.present`, `range_hood.present` | fridge filter 6 mo, dishwasher filter, hood filter degrease |
@@ -38,7 +38,7 @@ Only facts with a Task consequence. Keys are dotted paths; values are enums, int
     interval: 90d
     detail: "Size {{furnace.filter_size}}. Arrow points toward the furnace."
 - id: sprinkler.blowout
-  when: { sprinkler.present: true, home.climate: [cold, very_cold] }
+  when: { sprinkler.present: true }
   task:
     title: Blow out sprinkler lines
     interval: 365d
@@ -49,15 +49,15 @@ Only facts with a Task consequence. Keys are dotted paths; values are enums, int
 
 ## Worked example: 1920s brick house, Denver
 
-Facts: house, 1925, 1 story, 80204 (cold), gas furnace 16x25x1, central AC, tank water heater 2019, city water, sewer, no sump, asphalt roof 2015, gutters no guards, brick siding, wood deck, lawn + sprinkler, big tree near house, 3 smoke / 1 CO, long dryer vent, gas range, garage with opener.
+Facts: house, 1925, 1 story, 1,100 sqft, 2 bed / 1 bath, gas furnace 16x25x1, central AC, tank water heater 2019, city water, sewer, no sump, asphalt roof 2015, gutters no guards, wood deck, lawn + sprinkler, big tree near house, 3 smoke / 1 CO, long dryer vent, gas range, garage with opener.
 
 Materialized (18 tasks): furnace filter 90d · furnace service yearly (Sept–Oct) · AC coil clean yearly (May) · water heater flush yearly · anode rod 3 yr · roof inspection yearly · gutter clean 2× (Apr, Nov) · deck seal 2 yr (Jun–Aug) · sprinkler blowout (Oct) · sprinkler startup (Apr–May) · tree trim yearly · detector batteries 6 mo · CO detector replace 7 yr · dryer vent clean yearly · hood filter 90d · garage door balance 6 mo · garage door lube yearly · radon test (never done → due now).
 
-No brick repaint, no softener salt, no septic, no pool: the facts said so.
+No softener salt, no septic, no pool: the facts said so.
 
 ## Out of scope for v1
 
-Server push (reminders are local), assignment and rotation, cost tracking, contractor contacts, photos, multiple homes per user, rule expressions, climate beyond a zip → zone lookup table.
+Server push (reminders are local), assignment and rotation, cost tracking, contractor contacts, photos, multiple homes per user, rule expressions, climate zones (seasonal windows are fixed months in v1; zip → climate comes later), siding and fence facts, vehicles, interior facts (flooring, fireplace, basement).
 
 ## Tickets
 
