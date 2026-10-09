@@ -5,11 +5,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/erikmingo/upkeep-api/internal/config"
 	"github.com/erikmingo/upkeep-api/internal/db"
 	"github.com/erikmingo/upkeep-api/internal/rules"
 	"github.com/erikmingo/upkeep-api/internal/seed"
+	"github.com/erikmingo/upkeep-api/internal/upkeep"
 	"github.com/mhiro2/seedling"
 )
 
@@ -44,5 +46,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("loaded %d rules; seeded %d users; home %d %q with %d facts\n", len(rs), res.Len(), home.ID, home.Name, len(seed.DenverFacts))
+	created, _, err := upkeep.Materialize(ctx, db.New(pool), home.ID, time.Now())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("loaded %d rules; seeded %d users; home %d %q with %d facts and %d tasks\n", len(rs), res.Len(), home.ID, home.Name, len(seed.DenverFacts), created)
 }
