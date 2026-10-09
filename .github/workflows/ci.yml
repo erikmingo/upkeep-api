@@ -1,0 +1,36 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: upkeep
+          POSTGRES_PASSWORD: upkeep
+          POSTGRES_DB: upkeep_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U upkeep"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test ./... -timeout 120s
+        env:
+          TEST_DATABASE_URL: postgres://upkeep:upkeep@localhost:5432/upkeep_test?sslmode=disable
