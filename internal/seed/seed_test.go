@@ -65,3 +65,51 @@ func TestFakeIsDeterministic(t *testing.T) {
 		t.Fatalf("rows share an email: %v", a)
 	}
 }
+
+func TestTaskResolvesItsHome(t *testing.T) {
+	pool := testPool(t)
+	tx := seedlingpgx.WithTx(t, pool)
+
+	res := Session[db.Task]().InsertOne(t, tx)
+	task := res.Root()
+	if task.ID == 0 || task.HomeID == 0 {
+		t.Fatalf("got %+v", task)
+	}
+	home, err := db.New(tx).GetHome(context.Background(), task.HomeID)
+	if err != nil || home.Name != "Test Home" {
+		t.Fatalf("home not inserted: %+v %v", home, err)
+	}
+	c := Session[db.Completion]().InsertOne(t, tx, seedling.Use("task", task)).Root()
+	if c.TaskID != task.ID || c.MemberID == 0 {
+		t.Fatalf("got %+v", c)
+	}
+}
+
+func TestDenverSeed(t *testing.T) {
+	pool := testPool(t)
+	tx := seedlingpgx.WithTx(t, pool)
+	q := db.New(tx)
+	ctx := context.Background()
+
+	u := Users().InsertOne(t, tx, Fake()).Root()
+	home, err := Denver(ctx, q, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	facts, err := q.ListFacts(ctx, home.ID)
+	if err != nil || len(facts) != len(DenverFacts) {
+		t.Fatalf("facts=%d want %d err=%v", len(facts), len(DenverFacts), err)
+	}
+	members, err := q.ListMembers(ctx, home.ID)
+	if err != nil || len(members) != 1 || members[0].Email != u.Email {
+		t.Fatalf("members=%+v err=%v", members, err)
+	}
+	// upsert: re-running a fact keeps the row count
+	if _, err := q.UpsertFact(ctx, db.UpsertFactParams{HomeID: home.ID, Key: "home.beds", Value: []byte("3"), Source: "user"}); err != nil {
+		t.Fatal(err)
+	}
+	facts, _ = q.ListFacts(ctx, home.ID)
+	if len(facts) != len(DenverFacts) {
+		t.Fatalf("upsert duplicated a fact: %d", len(facts))
+	}
+}

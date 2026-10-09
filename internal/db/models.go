@@ -8,6 +8,56 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Completion struct {
+	ID          int64
+	TaskID      int64
+	MemberID    int64
+	CompletedAt pgtype.Timestamptz
+}
+
+type Fact struct {
+	ID        int64
+	HomeID    int64
+	Key       string
+	Value     []byte
+	Source    string
+	UpdatedAt pgtype.Timestamptz
+}
+
+type Home struct {
+	ID        int64
+	Name      string
+	CreatedAt pgtype.Timestamptz
+}
+
+type Member struct {
+	ID        int64
+	HomeID    int64
+	UserID    int64
+	CreatedAt pgtype.Timestamptz
+}
+
+type Rule struct {
+	ID         string
+	Version    int32
+	Definition []byte
+	UpdatedAt  pgtype.Timestamptz
+}
+
+type Task struct {
+	ID           int64
+	HomeID       int64
+	RuleID       *string
+	Title        string
+	Detail       string
+	IntervalDays int32
+	SeasonStart  *string
+	SeasonEnd    *string
+	StartDate    pgtype.Date
+	ArchivedAt   pgtype.Timestamptz
+	CreatedAt    pgtype.Timestamptz
+}
+
 type User struct {
 	ID          int64
 	Email       string

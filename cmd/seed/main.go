@@ -1,4 +1,4 @@
-// Command seed resets the users table to a fixed, fake dataset: same rows every run.
+// Command seed resets users and homes to a fixed dataset: 20 fake users and the Denver example home.
 package main
 
 import (
@@ -28,12 +28,16 @@ func main() {
 	if err := db.Migrate(ctx, pool); err != nil {
 		log.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, "TRUNCATE users RESTART IDENTITY CASCADE"); err != nil {
+	if _, err := pool.Exec(ctx, "TRUNCATE users, homes RESTART IDENTITY CASCADE"); err != nil {
 		log.Fatal(err)
 	}
 	res, err := seed.Users().InsertManyE(ctx, pool, users, seedling.WithSeed(42), seed.Fake())
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("seeded %d users\n", res.Len())
+	home, err := seed.Denver(ctx, db.New(pool), res.MustRootAt(0).ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("seeded %d users; home %d %q with %d facts\n", res.Len(), home.ID, home.Name, len(seed.DenverFacts))
 }
