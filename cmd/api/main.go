@@ -14,6 +14,7 @@ import (
 
 	"github.com/erikmingo/upkeep-api/internal/config"
 	"github.com/erikmingo/upkeep-api/internal/db"
+	"github.com/erikmingo/upkeep-api/internal/rules"
 )
 
 type pinger interface {
@@ -48,6 +49,9 @@ func run(ctx context.Context) error {
 	}
 	defer pool.Close()
 	if err := db.Migrate(ctx, pool); err != nil {
+		return err
+	}
+	if _, err := rules.Load(ctx, db.New(pool)); err != nil {
 		return err
 	}
 	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: newMux(pool)}

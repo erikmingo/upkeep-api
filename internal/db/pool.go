@@ -43,6 +43,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
+	defer p.Close()
 	_, err = p.Up(ctx)
 	return err
 }

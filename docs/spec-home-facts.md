@@ -45,15 +45,15 @@ Only facts with a Task consequence. Keys are dotted paths; values are enums, int
     season: { start: 10-01, end: 11-15 }
 ```
 
-`when` is an AND of key → allowed values. No expressions in v1; anything that needs one becomes two rules. Rule ids are stable; Tasks reference them.
+`when` is an AND of key → allowed values; an empty `when` matches every home (detector batteries). No expressions in v1; anything that needs one becomes two rules (`dryer.vent.clean.long` / `.short`). Rule ids are stable; Tasks reference them. The library lives in `internal/rules/rules.yaml`; the loader rejects unknown keys and values against `internal/rules/taxonomy.go`.
 
 ## Worked example: 1920s brick house, Denver
 
 Facts: house, 1925, 1 story, 1,100 sqft, 2 bed / 1 bath, gas furnace 16x25x1, central AC, tank water heater 2019, city water, sewer, no sump, asphalt roof 2015, gutters no guards, wood deck, lawn + sprinkler, big tree near house, 3 smoke / 1 CO, long dryer vent, gas range, garage with opener.
 
-Materialized (18 tasks): furnace filter 90d · furnace service yearly (Sept–Oct) · AC coil clean yearly (May) · water heater flush yearly · anode rod 3 yr · roof inspection yearly · gutter clean 2× (Apr, Nov) · deck seal 2 yr (Jun–Aug) · sprinkler blowout (Oct) · sprinkler startup (Apr–May) · tree trim yearly · detector batteries 6 mo · CO detector replace 7 yr · dryer vent clean yearly · hood filter 90d · garage door balance 6 mo · garage door lube yearly · radon test (never done → due now).
+Materialized (23 tasks, as `internal/rules/rules.yaml` computes it; `TestDenverMatchesExactly` pins the list): furnace filter 90d · furnace service yearly (Sep–Oct) · AC coil clean yearly (May) · water heater flush yearly · anode rod 3 yr · roof inspection yearly · gutter clean spring (Apr) · gutter clean fall (Nov) · deck seal 2 yr (Jun–Aug) · sprinkler blowout (Oct) · sprinkler startup (Apr–May) · tree trim yearly · lawn aerate (Sep) · detector batteries 6 mo · CO detectors replace 7 yr · smoke detectors replace 10 yr · dryer vent clean yearly · radon test 2 yr · dishwasher filter 90d · disposal clean 30d · hood filter 90d · garage door balance 6 mo · garage door lube yearly.
 
-No softener salt, no septic, no pool: the facts said so.
+No softener salt, no septic, no pool, no fridge filter: the facts said so.
 
 ## Out of scope for v1
 
