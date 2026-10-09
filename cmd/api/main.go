@@ -38,7 +38,7 @@ func run(ctx context.Context) error {
 	if _, err := rules.Load(ctx, q); err != nil {
 		return err
 	}
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.New(api.Deps{Queries: q, Pinger: pool, DevHomeHeader: true})}
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.New(api.Deps{DB: pool, Pinger: pool, DevHomeHeader: true})}
 
 	errc := make(chan error, 1)
 	go func() {

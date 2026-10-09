@@ -18,25 +18,40 @@ type Pinger interface {
 	Ping(context.Context) error
 }
 
+// DB is a pool or a transaction: anything sqlc can query that can also open a transaction.
+type DB interface {
+	db.DBTX
+	Begin(context.Context) (pgx.Tx, error)
+}
+
 type Deps struct {
-	Queries *db.Queries
-	Pinger  Pinger
+	DB     DB
+	Pinger Pinger
 	// DevHomeHeader identifies the caller by the X-Home header. Dev only; never true in production.
 	DevHomeHeader bool
+	// Now overrides the clock in tests.
+	Now func() time.Time
+}
+
+func (d Deps) now() time.Time {
+	if d.Now != nil {
+		return d.Now()
+	}
+	return time.Now()
 }
 
 func New(d Deps) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(d.Pinger))
 	v1 := http.NewServeMux()
-	// v1 routes register here (#19)
+	d.routes(v1)
 	mux.Handle("/v1/", http.StripPrefix("/v1", d.auth(v1)))
 	return mux
 }
 
 func (d Deps) auth(next http.Handler) http.Handler {
 	if d.DevHomeHeader {
-		return homeFromHeader(d.Queries, next)
+		return homeFromHeader(db.New(d.DB), next)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "no authentication configured")
