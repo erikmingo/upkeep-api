@@ -174,3 +174,36 @@ func Matching(rs []Rule, f Facts) []Rule {
 	}
 	return out
 }
+
+// ValidateFact checks a JSON-decoded fact value (string, bool, float64) against the taxonomy.
+func ValidateFact(key string, value any) error {
+	tax, ok := Taxonomy[key]
+	if !ok {
+		return fmt.Errorf("unknown fact key %q", key)
+	}
+	if k, isKind := tax[0].(kind); isKind {
+		switch k {
+		case kindBool:
+			if _, ok := value.(bool); ok {
+				return nil
+			}
+			return fmt.Errorf("%s must be true or false", key)
+		case kindInt:
+			if f, ok := value.(float64); ok && f == float64(int64(f)) {
+				return nil
+			}
+			return fmt.Errorf("%s must be a whole number", key)
+		case kindString:
+			if _, ok := value.(string); ok {
+				return nil
+			}
+			return fmt.Errorf("%s must be a string", key)
+		}
+	}
+	for _, t := range tax {
+		if reflect.DeepEqual(t, value) {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s must be one of %v", key, tax)
+}

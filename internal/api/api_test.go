@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/erikmingo/upkeep-api/internal/db"
 	"github.com/erikmingo/upkeep-api/internal/rules"
@@ -75,7 +76,7 @@ func testDeps(t *testing.T) (Deps, db.Home) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Deps{Queries: q, Pinger: fakePinger{}, DevHomeHeader: true}, home
+	return Deps{DB: tx, Pinger: fakePinger{}, DevHomeHeader: true, Now: func() time.Time { return time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC) }}, home
 }
 
 func TestHomeHeader(t *testing.T) {
@@ -90,9 +91,8 @@ func TestHomeHeader(t *testing.T) {
 	if rec := do(h, "GET", "/v1/home", "", "X-Home", "abc"); rec.Code != 401 {
 		t.Fatalf("garbage header: code=%d", rec.Code)
 	}
-	// a known home passes the middleware; no v1 routes yet, so the mux answers 404 for the path itself
 	rec := do(h, "GET", "/v1/home", "", "X-Home", strconv.FormatInt(home.ID, 10))
-	if rec.Code == 401 {
-		t.Fatalf("known home rejected: %s", rec.Body.String())
+	if rec.Code != 200 {
+		t.Fatalf("known home: code=%d %s", rec.Code, rec.Body.String())
 	}
 }
