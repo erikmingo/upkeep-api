@@ -1,6 +1,19 @@
 # API v1
 
-Base: `http://<host>:8099`. JSON in and out. Dev auth: `X-Home: <home id>` on every `/v1/*` request (see README). Errors: `{"error": "message"}` with 400 / 401 / 404 / 500. Dates are `YYYY-MM-DD` (UTC days).
+Base: `http://<host>:8099`. JSON in and out. Auth: `Authorization: Bearer <session_token>` on every `/v1/*` request except `/v1/auth/*`; 401 means sign in again. Errors: `{"error": "message"}` with 400 / 401 / 404 / 500. Dates are `YYYY-MM-DD` (UTC days).
+
+## POST /v1/auth/magic-link
+`{"email":"you@example.com"}` → 202 `{"status":"sent"}` whether or not the address is known. The email carries a one-time code (15 minutes). Without `RESEND_API_KEY` the API logs it instead.
+
+## POST /v1/auth/verify
+`{"token":"<code>"}` (or `GET /v1/auth/verify?token=`) → 200
+```json
+{"session_token":"…","user":{"id":1,"email":"you@example.com","display_name":"you"},"home":{"id":1,"name":"My home"}}
+```
+A new address gets a user and an empty home. Session tokens last 30 days; 401 with a message on a used, expired or unknown code.
+
+## POST /v1/auth/logout
+Bearer session → 204; the token stops working.
 
 ## GET /health
 `{"status":"ok","service":"upkeep-api","db":"ok"}` or 503 with `"status":"degraded","db":"unreachable"`.
@@ -32,7 +45,7 @@ Active tasks, soonest `next_due` first; overdue ones come first by construction.
 ```
 
 ## POST /v1/tasks/{id}/complete
-Body optional: `{"member_id":1}`; defaults to the home's first member until sessions exist. Returns the task with its new `next_due` and `last_completed`. 404 for another home's task or an archived one; 400 for a member not in this home.
+The completing member is the signed-in user. Returns the task with its new `next_due` and `last_completed`. 404 for another home's task or an archived one.
 
 ## POST /v1/tasks
 Hand-added task, not tied to a rule. `season_start`/`season_end` both `MM-DD` or both absent.

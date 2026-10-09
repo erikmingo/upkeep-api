@@ -14,6 +14,7 @@ import (
 	"github.com/erikmingo/upkeep-api/internal/api"
 	"github.com/erikmingo/upkeep-api/internal/config"
 	"github.com/erikmingo/upkeep-api/internal/db"
+	"github.com/erikmingo/upkeep-api/internal/mail"
 	"github.com/erikmingo/upkeep-api/internal/rules"
 )
 
@@ -22,9 +23,11 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if cfg.Env == "production" {
-		// the only auth today is the dev X-Home header, which must never run in production
-		return errors.New("no production authentication exists yet; refusing to start with ENV=production")
+	var mailer mail.Mailer = mail.Log{}
+	if cfg.ResendKey != "" {
+		mailer = mail.Resend{APIKey: cfg.ResendKey, From: cfg.MailFrom}
+	} else if cfg.Env == "production" {
+		return errors.New("RESEND_API_KEY is required in production; sign-in codes cannot go to the log")
 	}
 	pool, err := db.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -38,11 +41,11 @@ func run(ctx context.Context) error {
 	if _, err := rules.Load(ctx, q); err != nil {
 		return err
 	}
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.New(api.Deps{DB: pool, Pinger: pool, DevHomeHeader: true})}
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.New(api.Deps{DB: pool, Pinger: pool, Mailer: mailer})}
 
 	errc := make(chan error, 1)
 	go func() {
-		log.Printf("listening on %s (env=%s, auth=X-Home header)", srv.Addr, cfg.Env)
+		log.Printf("listening on %s (env=%s, mailer=%T)", srv.Addr, cfg.Env, mailer)
 		errc <- srv.ListenAndServe()
 	}()
 
