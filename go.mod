@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
+	github.com/goccy/go-yaml v1.19.2
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/mhiro2/seedling v0.4.1
 	github.com/mhiro2/seedling/seedlingpgx v0.4.1
@@ -33,7 +34,6 @@ require (
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.8.0 // indirect
 	github.com/go-sql-driver/mysql v1.10.0 // indirect
-	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect

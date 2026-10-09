@@ -1,0 +1,136 @@
+# Rule library v1. Format: docs/spec-home-facts.md. `when` is an AND of fact key → allowed values; empty = every home.
+# Intervals in days; seasons are fixed MM-DD windows. Ids are stable: tasks reference them.
+
+# hvac
+- id: furnace.filter.change
+  when: { furnace.type: [gas, electric, heat_pump] }
+  task: { title: Change furnace filter, interval: 90, detail: "Size {{furnace.filter_size}}. Arrow points toward the furnace." }
+- id: furnace.service
+  when: { furnace.type: [gas, electric] }
+  task: { title: Annual furnace service, interval: 365, season: { start: "09-01", end: "10-31" } }
+- id: heat_pump.service
+  when: { furnace.type: [heat_pump] }
+  task: { title: Annual heat pump service, interval: 365, season: { start: "09-01", end: "10-31" } }
+- id: boiler.bleed
+  when: { furnace.type: [boiler] }
+  task: { title: Bleed radiators and check boiler pressure, interval: 365, season: { start: "09-15", end: "10-31" } }
+- id: ac.coil.clean
+  when: { ac.type: [central] }
+  task: { title: Clean AC condenser coils, interval: 365, season: { start: "05-01", end: "05-31" } }
+- id: ac.window.clean
+  when: { ac.type: [window] }
+  task: { title: Clean window AC filters and install units, interval: 365, season: { start: "05-01", end: "05-31" } }
+- id: mini_split.filter.clean
+  when: { ac.type: [mini_split] }
+  task: { title: Clean mini-split filters, interval: 30 }
+- id: humidifier.pad
+  when: { humidifier.present: [true] }
+  task: { title: Replace humidifier pad, interval: 365, season: { start: "10-01", end: "10-31" } }
+
+# water
+- id: water_heater.flush
+  when: { water_heater.type: [tank] }
+  task: { title: Flush water heater tank, interval: 365 }
+- id: water_heater.anode
+  when: { water_heater.type: [tank] }
+  task: { title: Inspect water heater anode rod, interval: 1095 }
+- id: tankless.descale
+  when: { water_heater.type: [tankless] }
+  task: { title: Descale tankless water heater, interval: 365 }
+- id: softener.salt
+  when: { softener.present: [true] }
+  task: { title: Refill water softener salt, interval: 30 }
+- id: well.test
+  when: { water.source: [well] }
+  task: { title: Test well water, interval: 365 }
+- id: septic.pump
+  when: { sewer.type: [septic] }
+  task: { title: Pump septic tank, interval: 1095 }
+- id: sump.test
+  when: { sump_pump.present: [true] }
+  task: { title: Test sump pump, interval: 365, season: { start: "03-01", end: "04-30" } }
+
+# exterior
+- id: roof.inspect
+  when: { roof.material: [asphalt, metal, tile, flat] }
+  task: { title: Inspect roof and flashing, interval: 365 }
+- id: gutters.clean.spring
+  when: { gutters.present: [true], gutters.guards: [false] }
+  task: { title: Clean gutters (spring), interval: 365, season: { start: "04-01", end: "04-30" } }
+- id: gutters.clean.fall
+  when: { gutters.present: [true], gutters.guards: [false] }
+  task: { title: Clean gutters (fall), interval: 365, season: { start: "11-01", end: "11-30" } }
+- id: gutters.guards.check
+  when: { gutters.present: [true], gutters.guards: [true] }
+  task: { title: Check gutter guards and downspouts, interval: 365, season: { start: "11-01", end: "11-30" } }
+- id: deck.seal.wood
+  when: { deck.material: [wood] }
+  task: { title: Seal wood deck, interval: 730, season: { start: "06-01", end: "08-31" } }
+- id: deck.clean.composite
+  when: { deck.material: [composite] }
+  task: { title: Wash composite deck, interval: 365, season: { start: "05-01", end: "06-30" } }
+
+# outdoor
+- id: sprinkler.blowout
+  when: { sprinkler.present: [true] }
+  task: { title: Blow out sprinkler lines, interval: 365, season: { start: "10-01", end: "11-15" } }
+- id: sprinkler.startup
+  when: { sprinkler.present: [true] }
+  task: { title: Start up sprinklers and check heads, interval: 365, season: { start: "04-15", end: "05-31" } }
+- id: tree.trim
+  when: { trees.near_house: [true] }
+  task: { title: Trim trees away from roof and lines, interval: 365 }
+- id: lawn.aerate
+  when: { lawn.present: [true] }
+  task: { title: Aerate and overseed lawn, interval: 365, season: { start: "09-01", end: "09-30" } }
+- id: pool.chemistry
+  when: { pool.type: [pool] }
+  task: { title: Test pool chemistry, interval: 7, season: { start: "05-15", end: "09-15" } }
+- id: hot_tub.water_change
+  when: { pool.type: [hot_tub] }
+  task: { title: Drain and refill hot tub, interval: 90 }
+
+# safety
+- id: detectors.batteries
+  when: {}
+  task: { title: Replace smoke and CO detector batteries, interval: 180, detail: "{{detectors.smoke_count}} smoke, {{detectors.co_count}} CO." }
+- id: detectors.co.replace
+  when: {}
+  task: { title: Replace CO detectors (7-year life), interval: 2555 }
+- id: detectors.smoke.replace
+  when: {}
+  task: { title: Replace smoke detectors (10-year life), interval: 3650 }
+- id: extinguisher.check
+  when: { extinguisher.present: [true] }
+  task: { title: Check fire extinguisher gauge, interval: 365 }
+- id: dryer.vent.clean.long
+  when: { dryer.vent_length: [long] }
+  task: { title: Clean dryer vent duct, interval: 365 }
+- id: dryer.vent.clean.short
+  when: { dryer.vent_length: [short] }
+  task: { title: Clean dryer vent duct, interval: 730 }
+- id: radon.test
+  when: { home.type: [house, townhouse] }
+  task: { title: Test for radon, interval: 730 }
+
+# appliances
+- id: fridge.filter
+  when: { fridge.water_filter: [true] }
+  task: { title: Replace fridge water filter, interval: 180 }
+- id: dishwasher.filter
+  when: { dishwasher.present: [true] }
+  task: { title: Clean dishwasher filter, interval: 90 }
+- id: disposal.clean
+  when: { disposal.present: [true] }
+  task: { title: Clean garbage disposal, interval: 30 }
+- id: range_hood.filter
+  when: { range_hood.present: [true] }
+  task: { title: Degrease range hood filter, interval: 90 }
+
+# garage
+- id: garage.door.balance
+  when: { garage.door_opener: [true] }
+  task: { title: Test garage door balance and auto-reverse, interval: 180 }
+- id: garage.door.lube
+  when: { garage.present: [true] }
+  task: { title: Lubricate garage door rollers and hinges, interval: 365 }

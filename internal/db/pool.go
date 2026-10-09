@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/database"
+	"github.com/pressly/goose/v3/lock"
 )
 
 //go:embed migrations/*.sql
@@ -34,7 +35,12 @@ func Migrator(pool *pgxpool.Pool) (*goose.Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return goose.NewProvider(database.DialectPostgres, stdlib.OpenDBFromPool(pool), sub)
+	// session lock: test packages and API replicas may migrate the same database at once
+	locker, err := lock.NewPostgresSessionLocker()
+	if err != nil {
+		return nil, err
+	}
+	return goose.NewProvider(database.DialectPostgres, stdlib.OpenDBFromPool(pool), sub, goose.WithSessionLocker(locker))
 }
 
 // Migrate applies every pending migration; run at startup so dev never drifts.
@@ -43,6 +49,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
+	defer p.Close()
 	_, err = p.Up(ctx)
 	return err
 }

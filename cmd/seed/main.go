@@ -8,6 +8,7 @@ import (
 
 	"github.com/erikmingo/upkeep-api/internal/config"
 	"github.com/erikmingo/upkeep-api/internal/db"
+	"github.com/erikmingo/upkeep-api/internal/rules"
 	"github.com/erikmingo/upkeep-api/internal/seed"
 	"github.com/mhiro2/seedling"
 )
@@ -28,6 +29,10 @@ func main() {
 	if err := db.Migrate(ctx, pool); err != nil {
 		log.Fatal(err)
 	}
+	rs, err := rules.Load(ctx, db.New(pool))
+	if err != nil {
+		log.Fatal(err)
+	}
 	if _, err := pool.Exec(ctx, "TRUNCATE users, homes RESTART IDENTITY CASCADE"); err != nil {
 		log.Fatal(err)
 	}
@@ -39,5 +44,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("seeded %d users; home %d %q with %d facts\n", res.Len(), home.ID, home.Name, len(seed.DenverFacts))
+	fmt.Printf("loaded %d rules; seeded %d users; home %d %q with %d facts\n", len(rs), res.Len(), home.ID, home.Name, len(seed.DenverFacts))
 }
