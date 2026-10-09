@@ -30,6 +30,16 @@ type Home struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type Invite struct {
+	ID        int64
+	HomeID    int64
+	CreatedBy int64
+	CodeHash  []byte
+	ExpiresAt pgtype.Timestamptz
+	UsedAt    pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
 type LoginToken struct {
 	ID        int64
 	Email     string

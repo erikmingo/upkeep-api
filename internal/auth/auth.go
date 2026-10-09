@@ -123,3 +123,27 @@ func Resolve(ctx context.Context, q *db.Queries, sessionToken string, now time.T
 	}
 	return Identity{User: user, Home: db.Home{ID: hm.ID, Name: hm.Name, CreatedAt: hm.CreatedAt}, MemberID: hm.MemberID}, nil
 }
+
+const InviteTTL = 7 * 24 * time.Hour
+
+// CreateInvite returns a one-time code that lets another signed-in user join the home.
+func CreateInvite(ctx context.Context, q *db.Queries, homeID, memberID int64, now time.Time) (string, error) {
+	code := newToken()
+	_, err := q.CreateInvite(ctx, db.CreateInviteParams{HomeID: homeID, CreatedBy: memberID, CodeHash: Hash(code), ExpiresAt: pgtype.Timestamptz{Time: now.Add(InviteTTL), Valid: true}})
+	return code, err
+}
+
+// AcceptInvite consumes the code and makes the user a member of its home. Already a member → no-op, still consumes.
+func AcceptInvite(ctx context.Context, q *db.Queries, code string, userID int64, now time.Time) (db.Home, error) {
+	inv, err := q.ConsumeInvite(ctx, db.ConsumeInviteParams{CodeHash: Hash(code), ExpiresAt: pgtype.Timestamptz{Time: now, Valid: true}})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.Home{}, ErrInvalidToken
+	}
+	if err != nil {
+		return db.Home{}, err
+	}
+	if _, err := q.CreateMember(ctx, db.CreateMemberParams{HomeID: inv.HomeID, UserID: userID}); err != nil {
+		return db.Home{}, err
+	}
+	return q.GetHome(ctx, inv.HomeID)
+}

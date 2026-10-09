@@ -53,3 +53,9 @@ Hand-added task, not tied to a rule. `season_start`/`season_end` both `MM-DD` or
 {"title":"Fix the gate latch","interval_days":365,"detail":"","season_start":null,"season_end":null}
 ```
 → 201 with the task shape above.
+
+## POST /v1/home/invites
+Bearer session → 201 `{"code":"…","expires_in_days":7,"home":{"id":1,"name":"My home"}}`. Share the code; it works once.
+
+## POST /v1/invites/accept
+Bearer session + `{"code":"…"}` → 200 `{"home":{"id":1,"name":"My home"}}` and the caller is now a member. 404 for a used, expired or unknown code. Accepting a home you already belong to is a no-op.
