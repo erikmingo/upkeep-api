@@ -5,8 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/erikmingo/upkeep-api/internal/auth"
 	"github.com/erikmingo/upkeep-api/internal/db"
 	"github.com/erikmingo/upkeep-api/internal/rules"
 	"github.com/erikmingo/upkeep-api/internal/upkeep"
@@ -20,6 +22,39 @@ func (d Deps) routes(v1 *http.ServeMux) {
 	v1.HandleFunc("GET /tasks", d.listTasks)
 	v1.HandleFunc("POST /tasks", d.createTask)
 	v1.HandleFunc("POST /tasks/{id}/complete", d.completeTask)
+	v1.HandleFunc("POST /home/invites", d.createInvite)
+	v1.HandleFunc("POST /invites/accept", d.acceptInvite)
+}
+
+func (d Deps) createInvite(w http.ResponseWriter, r *http.Request) {
+	id := IdentityFrom(r.Context())
+	code, err := auth.CreateInvite(r.Context(), db.New(d.DB), id.Home.ID, id.MemberID, d.now())
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	// ponytail: the "link" is a code the app pastes; universal links need a domain the app is associated with
+	writeJSON(w, 201, map[string]any{"code": code, "expires_in_days": int(auth.InviteTTL.Hours() / 24), "home": map[string]any{"id": id.Home.ID, "name": id.Home.Name}})
+}
+
+func (d Deps) acceptInvite(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Code == "" {
+		writeError(w, 400, "code required")
+		return
+	}
+	home, err := auth.AcceptInvite(r.Context(), db.New(d.DB), strings.TrimSpace(in.Code), IdentityFrom(r.Context()).User.ID, d.now())
+	if errors.Is(err, auth.ErrInvalidToken) {
+		writeError(w, 404, "that invite is invalid, used or expired")
+		return
+	}
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]any{"home": map[string]any{"id": home.ID, "name": home.Name}})
 }
 
 type homeOut struct {

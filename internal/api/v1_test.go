@@ -113,3 +113,37 @@ func TestFactsToTasksFlow(t *testing.T) {
 		t.Fatalf("cross-home: code=%d", rec.Code)
 	}
 }
+
+func TestInviteFlow(t *testing.T) {
+	d, _ := testDeps(t)
+	h := New(d)
+	m := d.Mailer.(*captureMailer)
+	owner := signIn(t, h, m, "owner@example.com")
+	guest := signIn(t, h, m, "guest@example.com")
+
+	rec := do(h, "POST", "/v1/home/invites", "", owner...)
+	var inv struct {
+		Code string                `json:"code"`
+		Home struct{ Name string } `json:"home"`
+	}
+	json.Unmarshal(rec.Body.Bytes(), &inv)
+	if rec.Code != 201 || inv.Code == "" || inv.Home.Name != "My home" {
+		t.Fatalf("create: code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec = do(h, "POST", "/v1/invites/accept", `{"code":"`+inv.Code+`"}`, guest...); rec.Code != 200 {
+		t.Fatalf("accept: code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	rec = do(h, "GET", "/v1/home", "", owner...)
+	if !strings.Contains(rec.Body.String(), `"email":"guest@example.com"`) {
+		t.Fatalf("guest not listed: %s", rec.Body.String())
+	}
+	if rec = do(h, "POST", "/v1/invites/accept", `{"code":"`+inv.Code+`"}`, guest...); rec.Code != 404 {
+		t.Fatalf("reuse: code=%d", rec.Code)
+	}
+	if rec = do(h, "POST", "/v1/invites/accept", `{}`, guest...); rec.Code != 400 {
+		t.Fatalf("empty: code=%d", rec.Code)
+	}
+	if rec = do(h, "POST", "/v1/home/invites", ""); rec.Code != 401 {
+		t.Fatalf("anonymous: code=%d", rec.Code)
+	}
+}

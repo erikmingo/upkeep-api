@@ -123,3 +123,55 @@ func TestExpiredTokenIsRejected(t *testing.T) {
 		t.Fatal("bad email accepted")
 	}
 }
+
+func TestInvites(t *testing.T) {
+	q := testQ(t)
+	ctx := context.Background()
+	now := time.Now()
+	m := &captureMailer{}
+	signUp := func(email string) Signed {
+		if err := RequestLink(ctx, q, m, email, now); err != nil {
+			t.Fatal(err)
+		}
+		s, err := Verify(ctx, q, tokenFrom(m.text), now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	owner := signUp("owner@example.com")
+	guest := signUp("guest@example.com")
+
+	code, err := CreateInvite(ctx, q, owner.Home.ID, owner.MemberID, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, err := AcceptInvite(ctx, q, code, guest.User.ID, now)
+	if err != nil || home.ID != owner.Home.ID {
+		t.Fatalf("accept: home=%+v err=%v", home, err)
+	}
+	members, _ := q.ListMembers(ctx, owner.Home.ID)
+	if len(members) != 2 {
+		t.Fatalf("members=%d", len(members))
+	}
+	// single use, bad code, expired
+	if _, err := AcceptInvite(ctx, q, code, guest.User.ID, now); err != ErrInvalidToken {
+		t.Fatalf("reuse: %v", err)
+	}
+	if _, err := AcceptInvite(ctx, q, "nope", guest.User.ID, now); err != ErrInvalidToken {
+		t.Fatalf("garbage: %v", err)
+	}
+	old, _ := CreateInvite(ctx, q, owner.Home.ID, owner.MemberID, now.Add(-8*24*time.Hour))
+	if _, err := AcceptInvite(ctx, q, old, guest.User.ID, now); err != ErrInvalidToken {
+		t.Fatalf("expired: %v", err)
+	}
+	// accepting as an existing member is a no-op
+	again, _ := CreateInvite(ctx, q, owner.Home.ID, owner.MemberID, now)
+	if _, err := AcceptInvite(ctx, q, again, owner.User.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	members, _ = q.ListMembers(ctx, owner.Home.ID)
+	if len(members) != 2 {
+		t.Fatalf("members after self-accept=%d", len(members))
+	}
+}
