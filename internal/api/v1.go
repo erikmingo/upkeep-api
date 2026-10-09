@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -186,15 +185,7 @@ func (d Deps) completeTask(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, err.Error())
 		return
 	}
-	var in struct {
-		MemberID *int64 `json:"member_id"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&in)
-	memberID, err := d.memberFor(ctx, q, home.ID, in.MemberID)
-	if err != nil {
-		writeError(w, 400, err.Error())
-		return
-	}
+	memberID := IdentityFrom(ctx).MemberID
 	if _, err := q.CreateCompletion(ctx, db.CreateCompletionParams{TaskID: task.ID, MemberID: memberID, CompletedAt: pgtype.Timestamptz{Time: d.now(), Valid: true}}); err != nil {
 		writeError(w, 500, err.Error())
 		return
@@ -211,24 +202,4 @@ func (d Deps) completeTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeError(w, 500, "task vanished")
-}
-
-// memberFor resolves who completed a task. ponytail: without auth the home's first member is the default; sessions (#21) replace this.
-func (d Deps) memberFor(ctx context.Context, q *db.Queries, homeID int64, explicit *int64) (int64, error) {
-	members, err := q.ListMembers(ctx, homeID)
-	if err != nil {
-		return 0, err
-	}
-	if explicit != nil {
-		for _, m := range members {
-			if m.ID == *explicit {
-				return m.ID, nil
-			}
-		}
-		return 0, errors.New("member_id is not a member of this home")
-	}
-	if len(members) == 0 {
-		return 0, errors.New("home has no members")
-	}
-	return members[0].ID, nil
 }

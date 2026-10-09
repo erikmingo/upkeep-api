@@ -17,8 +17,13 @@ Migrations in `internal/db/migrations` (goose, embedded) run at API startup. Bui
 
 CI (`.github/workflows/ci.yml`) runs gofmt, vet and the full test suite against a Postgres service on every PR. Branch protection on `main` requiring the `test` check is a one-time click: Settings → Branches → Add rule → `main` → Require status checks → `test`.
 
-Until real auth exists the API identifies the caller by an `X-Home` header (dev only; the server refuses to start with `ENV=production`). After `make seed` the Denver example is home 1:
+Sign-in is passwordless. Request a code, read it from the API log (no `RESEND_API_KEY` set), exchange it for a session:
 
 ```sh
-curl -H 'X-Home: 1' localhost:8099/v1/home
+curl -X POST localhost:8099/v1/auth/magic-link -H 'Content-Type: application/json' -d '{"email":"you@example.com"}'
+# API log: "Your Upkeep sign-in code: <code>"
+curl -X POST localhost:8099/v1/auth/verify -H 'Content-Type: application/json' -d '{"token":"<code>"}'   # → session_token
+curl -H 'Authorization: Bearer <session_token>' localhost:8099/v1/tasks
 ```
+
+After `make seed`, the Denver example home belongs to the first fake user; `psql $DATABASE_URL -c 'select email from users limit 1'` tells you which address to request a code for. A new address gets a fresh user and an empty "My home".

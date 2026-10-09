@@ -30,6 +30,15 @@ type Home struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type LoginToken struct {
+	ID        int64
+	Email     string
+	TokenHash []byte
+	ExpiresAt pgtype.Timestamptz
+	UsedAt    pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
 type Member struct {
 	ID        int64
 	HomeID    int64
@@ -42,6 +51,14 @@ type Rule struct {
 	Version    int32
 	Definition []byte
 	UpdatedAt  pgtype.Timestamptz
+}
+
+type Session struct {
+	ID        int64
+	UserID    int64
+	TokenHash []byte
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
 }
 
 type Task struct {
