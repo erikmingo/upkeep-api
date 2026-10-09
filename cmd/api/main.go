@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,36 +11,20 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/erikmingo/upkeep-api/internal/api"
 	"github.com/erikmingo/upkeep-api/internal/config"
 	"github.com/erikmingo/upkeep-api/internal/db"
 	"github.com/erikmingo/upkeep-api/internal/rules"
 )
 
-type pinger interface {
-	Ping(context.Context) error
-}
-
-func newMux(p pinger) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
-		defer cancel()
-		body := map[string]string{"status": "ok", "service": "upkeep-api", "db": "ok"}
-		w.Header().Set("Content-Type", "application/json")
-		if err := p.Ping(ctx); err != nil {
-			log.Printf("health: db ping: %v", err)
-			body["status"], body["db"] = "degraded", "unreachable"
-			w.WriteHeader(http.StatusServiceUnavailable)
-		}
-		json.NewEncoder(w).Encode(body)
-	})
-	return mux
-}
-
 func run(ctx context.Context) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
+	}
+	if cfg.Env == "production" {
+		// the only auth today is the dev X-Home header, which must never run in production
+		return errors.New("no production authentication exists yet; refusing to start with ENV=production")
 	}
 	pool, err := db.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -51,14 +34,15 @@ func run(ctx context.Context) error {
 	if err := db.Migrate(ctx, pool); err != nil {
 		return err
 	}
-	if _, err := rules.Load(ctx, db.New(pool)); err != nil {
+	q := db.New(pool)
+	if _, err := rules.Load(ctx, q); err != nil {
 		return err
 	}
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: newMux(pool)}
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.New(api.Deps{Queries: q, Pinger: pool, DevHomeHeader: true})}
 
 	errc := make(chan error, 1)
 	go func() {
-		log.Printf("listening on %s", srv.Addr)
+		log.Printf("listening on %s (env=%s, auth=X-Home header)", srv.Addr, cfg.Env)
 		errc <- srv.ListenAndServe()
 	}()
 
